@@ -75,6 +75,9 @@ func (d *PackageJsonDetector) GetSourceName() string {
 
 // cleanVersionSpecifier removes version range operators and extracts a specific version
 func cleanVersionSpecifier(version string) string {
+	// Trim spaces first
+	version = strings.TrimSpace(version)
+
 	// Remove common prefixes
 	version = strings.TrimPrefix(version, ">=")
 	version = strings.TrimPrefix(version, "<=")
