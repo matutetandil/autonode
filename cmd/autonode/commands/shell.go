@@ -100,10 +100,13 @@ func (c *ShellCommand) run(cmd *cobra.Command, args []string) error {
 		fmt.Println(`[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"`)
 		fmt.Printf("nvm use %s 2>/dev/null\n", detectedVersion)
 	case "nvs":
+		// For nvs, output commands to source nvs.sh and use version
+		fmt.Println(`export NVS_HOME="${NVS_HOME:-$HOME/.nvs}"`)
+		fmt.Println(`[ -s "$NVS_HOME/nvs.sh" ] && \. "$NVS_HOME/nvs.sh"`)
 		fmt.Printf("nvs use %s 2>/dev/null\n", detectedVersion)
 	case "volta":
-		// Volta doesn't need activation per directory, it reads package.json automatically
-		// But we can still output a use command
+		// Volta is a standalone binary, doesn't need sourcing
+		// It automatically manages versions per-directory
 		fmt.Printf("volta pin node@%s 2>/dev/null\n", detectedVersion)
 	}
 

@@ -1,5 +1,9 @@
 # AutoNode
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://go.dev/)
+[![Release](https://img.shields.io/github/v/release/matutetandil/autonode)](https://github.com/matutetandil/autonode/releases)
+
 Automatically detect and switch to the correct Node.js version for your project.
 
 ## Description

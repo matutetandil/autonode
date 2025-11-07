@@ -2,6 +2,8 @@ package managers
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/matutetandil/autonode/internal/core"
@@ -28,14 +30,46 @@ func (m *NvsManager) GetName() string {
 }
 
 // IsInstalled checks if nvs is installed on the system
+// nvs is a shell function, not a binary, so we check for the nvs.sh script
 func (m *NvsManager) IsInstalled() bool {
-	return m.shell.CommandExists("nvs")
+	nvsHome := m.getNvsHome()
+	nvsScript := filepath.Join(nvsHome, "nvs.sh")
+
+	// Check if nvs.sh exists
+	if _, err := os.Stat(nvsScript); err == nil {
+		return true
+	}
+
+	return false
+}
+
+// getNvsHome returns the nvs installation directory
+// Checks NVS_HOME environment variable, otherwise defaults to ~/.nvs
+func (m *NvsManager) getNvsHome() string {
+	if nvsHome := os.Getenv("NVS_HOME"); nvsHome != "" {
+		return nvsHome
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Join(homeDir, ".nvs")
+}
+
+// sourceNvs returns the shell command to source nvs.sh before executing nvs commands
+func (m *NvsManager) sourceNvs() string {
+	nvsHome := m.getNvsHome()
+	nvsScript := filepath.Join(nvsHome, "nvs.sh")
+	return fmt.Sprintf(". %s && ", nvsScript)
 }
 
 // IsVersionInstalled checks if a specific Node.js version is installed via nvs
 func (m *NvsManager) IsVersionInstalled(version string) (bool, error) {
-	// List installed versions
-	output, err := m.shell.Execute("nvs", "list")
+	// List installed versions (need to source nvs.sh first)
+	command := m.sourceNvs() + "nvs list"
+	output, err := m.shell.ExecuteInShell(command)
 	if err != nil {
 		return false, fmt.Errorf("failed to list nvs versions: %w", err)
 	}
@@ -48,7 +82,8 @@ func (m *NvsManager) IsVersionInstalled(version string) (bool, error) {
 // InstallVersion installs a specific Node.js version using nvs
 func (m *NvsManager) InstallVersion(version string) error {
 	normalizedVersion := normalizeNvsVersion(version)
-	_, err := m.shell.Execute("nvs", "add", normalizedVersion)
+	command := m.sourceNvs() + fmt.Sprintf("nvs add %s", normalizedVersion)
+	_, err := m.shell.ExecuteInShell(command)
 	if err != nil {
 		return fmt.Errorf("failed to install version %s: %w", normalizedVersion, err)
 	}
@@ -58,7 +93,8 @@ func (m *NvsManager) InstallVersion(version string) error {
 // UseVersion switches to a specific Node.js version using nvs
 func (m *NvsManager) UseVersion(version string) error {
 	normalizedVersion := normalizeNvsVersion(version)
-	_, err := m.shell.Execute("nvs", "use", normalizedVersion)
+	command := m.sourceNvs() + fmt.Sprintf("nvs use %s", normalizedVersion)
+	_, err := m.shell.ExecuteInShell(command)
 	if err != nil {
 		return fmt.Errorf("failed to use version %s: %w", normalizedVersion, err)
 	}
