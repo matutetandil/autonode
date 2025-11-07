@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 # GitHub repository
 REPO="matutetandil/autonode"
-VERSION="v0.3.0"
+VERSION="${AUTONODE_VERSION:-latest}"
 
 # Detect OS and architecture
 detect_platform() {
@@ -46,7 +46,14 @@ detect_platform() {
             ;;
     esac
 
-    BINARY_NAME="autonode-${OS}-${ARCH}"
+    # Archive name with extension
+    if [ "$OS" = "windows" ]; then
+        ARCHIVE_NAME="autonode-${OS}-${ARCH}.zip"
+    else
+        ARCHIVE_NAME="autonode-${OS}-${ARCH}.tar.gz"
+    fi
+
+    BINARY_NAME="autonode"
     if [ "$OS" = "windows" ]; then
         BINARY_NAME="${BINARY_NAME}.exe"
     fi
@@ -54,7 +61,7 @@ detect_platform() {
 
 # Download and install binary
 install_binary() {
-    local download_url="https://github.com/${REPO}/releases/download/${VERSION}/${BINARY_NAME}"
+    local download_url="https://github.com/${REPO}/releases/download/${VERSION}/${ARCHIVE_NAME}"
 
     echo -e "${BLUE}→ Downloading AutoNode ${VERSION} for ${OS}/${ARCH}...${NC}"
 
@@ -72,32 +79,49 @@ install_binary() {
         fi
     fi
 
-    local tmp_file="/tmp/autonode-${RANDOM}"
+    local tmp_dir="/tmp/autonode-install-${RANDOM}"
+    mkdir -p "$tmp_dir"
+    local tmp_archive="${tmp_dir}/${ARCHIVE_NAME}"
 
     # Download with curl or wget
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$download_url" -o "$tmp_file"
+        curl -fsSL "$download_url" -o "$tmp_archive"
     elif command -v wget >/dev/null 2>&1; then
-        wget -q "$download_url" -O "$tmp_file"
+        wget -q "$download_url" -O "$tmp_archive"
     else
         echo -e "${RED}Error: Neither curl nor wget found. Please install one of them.${NC}"
         exit 1
     fi
 
+    echo -e "${BLUE}→ Extracting archive...${NC}"
+
+    # Extract archive based on format
+    if [ "$OS" = "windows" ]; then
+        # Extract zip
+        unzip -q "$tmp_archive" -d "$tmp_dir"
+    else
+        # Extract tar.gz
+        tar -xzf "$tmp_archive" -C "$tmp_dir"
+    fi
+
     # Make executable and move to install directory
-    chmod +x "$tmp_file"
+    local extracted_binary="${tmp_dir}/${BINARY_NAME}"
+    chmod +x "$extracted_binary"
 
     if [ "$INSTALL_DIR" = "/usr/local/bin" ]; then
         # May need sudo
-        if mv "$tmp_file" "$INSTALL_DIR/autonode" 2>/dev/null; then
+        if mv "$extracted_binary" "$INSTALL_DIR/autonode" 2>/dev/null; then
             :
         else
             echo -e "${YELLOW}→ Installing to /usr/local/bin (requires sudo)...${NC}"
-            sudo mv "$tmp_file" "$INSTALL_DIR/autonode"
+            sudo mv "$extracted_binary" "$INSTALL_DIR/autonode"
         fi
     else
-        mv "$tmp_file" "$INSTALL_DIR/autonode"
+        mv "$extracted_binary" "$INSTALL_DIR/autonode"
     fi
+
+    # Clean up
+    rm -rf "$tmp_dir"
 
     echo -e "${GREEN}✓ AutoNode installed to ${INSTALL_DIR}/autonode${NC}"
 }

@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-11-07
+
+### Fixed
+
+- **Installation Script Archive Handling**: Fixed critical bug in `install.sh`
+  - GoReleaser creates `.tar.gz` archives (or `.zip` for Windows), not raw binaries
+  - Updated script to download correct archive format
+  - Added extraction step using `tar` or `unzip`
+  - Added cleanup of temporary files
+  - Changed default version from hardcoded to `latest` (can override with `AUTONODE_VERSION` env var)
+  - Fixes 404 error when running installation command
+
+### Added
+
+- **Unit Tests**: Complete test coverage for all detectors
+  - `NvmrcDetector`: 9 tests covering versions, whitespace, lts aliases, empty files
+  - `NodeVersionDetector`: 5 tests covering version formats and edge cases
+  - `PackageJsonDetector`: 20 tests covering operators, ranges, OR conditions, invalid JSON
+  - `DockerfileDetector`: 14 tests covering FROM patterns, alpine tags, comments, case sensitivity
+  - Total: 48 tests, all passing
+  - Tests for priority verification and source name verification
+
+- **CI/CD Test Execution**: Added test execution to release workflow
+  - All tests run automatically before building releases
+  - Release process halts if tests fail
+  - Ensures code quality before distribution
+
+### Changed
+
+- **README Roadmap**: Updated to reflect completed features
+  - Marked as completed: Unit tests, CI/CD pipeline, Shell integration
+  - Removed completed items from pending list
+
 ## [0.3.0] - 2025-11-07
 
 ### Added - Shell Integration & Auto-Update
