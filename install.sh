@@ -61,7 +61,13 @@ detect_platform() {
 
 # Download and install binary
 install_binary() {
-    local download_url="https://github.com/${REPO}/releases/download/${VERSION}/${ARCHIVE_NAME}"
+    # Construct download URL based on version
+    local download_url
+    if [ "$VERSION" = "latest" ]; then
+        download_url="https://github.com/${REPO}/releases/latest/download/${ARCHIVE_NAME}"
+    else
+        download_url="https://github.com/${REPO}/releases/download/${VERSION}/${ARCHIVE_NAME}"
+    fi
 
     echo -e "${BLUE}→ Downloading AutoNode ${VERSION} for ${OS}/${ARCH}...${NC}"
 
