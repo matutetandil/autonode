@@ -522,8 +522,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Roadmap
 
+- [x] Add unit tests
+- [x] Add CI/CD pipeline
+- [x] Shell integration for auto-switching on directory change
 - [ ] Add support for more version managers (fnm, asdf)
-- [ ] Add unit tests
-- [ ] Add CI/CD pipeline
 - [ ] Package managers (Homebrew, apt, etc.)
-- [ ] Shell integration for auto-switching on directory change
