@@ -20,7 +20,7 @@ No more manual version switching or compatibility issues - just run `autonode` a
   1. `.nvmrc` file (highest priority)
   2. `.node-version` file
   3. `engines.node` field in `package.json`
-  4. `FROM node:X` in `Dockerfile`
+  4. `FROM node:X` in `Dockerfile` (supports numeric versions, LTS codenames like `iron`/`jod`, and tags like `lts`/`latest`)
 
 - 🔄 **Multi-Manager Support**: Works with popular Node.js version managers:
   - **nvm** (Node Version Manager)
@@ -34,6 +34,11 @@ No more manual version switching or compatibility issues - just run `autonode` a
 - 🌐 **Cross-Platform**: Native binaries for Linux, macOS (Intel & Apple Silicon), and Windows
 
 - ⚡ **Fast & Lightweight**: Single binary, no runtime dependencies, instant startup
+
+- 🚀 **Dynamic LTS Resolution**: Intelligently resolves Node.js LTS codenames (iron, jod, krypton) from live API
+  - Automatic caching in `~/.autonode/` for offline use
+  - 24-hour cache validity with automatic refresh
+  - No recompilation needed when new Node versions are released
 
 ## Installation
 
@@ -293,8 +298,27 @@ AutoNode looks for version information in this order:
 2. **`.node-version`** - Alternative version file
 3. **`package.json`** - Reads `engines.node` field
 4. **`Dockerfile`** - Parses `FROM node:X` instruction
+   - Supports numeric versions: `FROM node:18.17.0`, `FROM node:20`
+   - Supports LTS codenames: `FROM node:iron-alpine`, `FROM node:jod`
+   - Supports special tags: `FROM node:lts`, `FROM node:latest`
+   - Works with all image variants: `-alpine`, `-slim`, `-bullseye`, etc.
 
 The first source that provides a version will be used.
+
+### Dockerfile LTS Codenames
+
+AutoNode dynamically resolves Node.js LTS codenames by fetching release data from the official Node.js API. Supported codenames include:
+
+| Codename | Node Version | LTS Start |
+|----------|--------------|-----------|
+| krypton  | 24           | 2025-10   |
+| jod      | 22           | 2024-10   |
+| iron     | 20           | 2023-10   |
+| hydrogen | 18           | 2022-10   |
+| gallium  | 16           | 2021-10   |
+| fermium  | 14           | 2020-10   |
+
+The mapping is cached locally in `~/.autonode/node-releases.json` and refreshed every 24 hours.
 
 ## Supported Version Managers
 

@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-11-07
+
+### Added - Dynamic Node.js Release Cache
+
+This release adds intelligent detection of Node.js LTS codenames in Dockerfiles through a dynamic caching system.
+
+#### Dynamic Codename Resolution
+
+- **Node.js API Integration**: Fetches release information from `https://nodejs.org/dist/index.json`
+  - Maps LTS codenames to their major versions dynamically
+  - No more hardcoded version mappings
+  - Always up-to-date with latest Node.js releases
+
+- **Smart Caching System**: Created `~/.autonode/` directory for persistent cache
+  - Cache stored in `~/.autonode/node-releases.json`
+  - 24-hour cache validity (refreshes daily)
+  - Includes all historical and current LTS codenames (argon, boron, carbon, dubnium, erbium, fermium, gallium, hydrogen, iron, jod, krypton)
+  - Graceful offline fallback with cached data
+
+#### Enhanced Dockerfile Detection
+
+- **LTS Codename Support**: Now detects Docker images with Node.js LTS codenames
+  - `FROM node:iron-alpine` → Node 20
+  - `FROM node:jod-alpine` → Node 22
+  - `FROM node:krypton` → Node 24
+  - Works with all image variants: `-alpine`, `-slim`, `-bullseye`, etc.
+
+- **Special Tag Handling**:
+  - `FROM node:lts` → Latest LTS version (currently 22)
+  - `FROM node:latest` → Latest stable (currently 23)
+  - `FROM node:current` → Latest stable (currently 23)
+
+- **Backward Compatibility**: All numeric versions still work
+  - `FROM node:18.17.0` → 18.17.0
+  - `FROM node:20` → 20
+
+#### Architecture Improvements
+
+- **New Components**:
+  - `internal/core/cache.go`: Generic cache manager for future extensibility
+  - `internal/core/node_releases.go`: Node.js API client with intelligent caching
+  - `internal/core/null_logger.go`: Silent logger for background operations
+
+- **Dependency Injection**: `DockerfileDetector` now receives `releasesClient` interface for dynamic resolution and testability
+
+#### Testing
+
+- **Comprehensive Test Coverage**: Added 33 new test cases
+  - `DockerfileDetector`: 41 tests total (added 27 new tests)
+    - LTS codename detection (iron, jod, hydrogen, gallium, krypton)
+    - LTS codenames with variants (alpine, slim, bullseye)
+    - Special tags (lts, latest, current)
+    - Special tags with variants
+    - Complex multi-variant scenarios
+  - `CacheManager`: 7 new tests
+    - Cache creation, read, write operations
+    - Cache validity checking
+    - Cache clearing functionality
+  - Created mock `releasesClient` for testing Dockerfile detector without HTTP requests
+  - All 81 test cases passing ✅
+
+### Changed
+
+- Dockerfile detector now makes HTTP requests on first run or when cache expires
+- Cache directory `~/.autonode/` created automatically on first use
+
+### Why This Matters
+
+Previously, Dockerfile detection only worked with numeric versions (`FROM node:18`). Many projects use LTS codenames (`FROM node:iron-alpine`) which were not recognized. This release makes AutoNode aware of all Node.js releases without requiring recompilation when new versions are released.
+
 ## [0.3.1] - 2025-11-07
 
 ### Fixed

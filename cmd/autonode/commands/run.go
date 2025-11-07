@@ -58,13 +58,22 @@ func (c *RunCommand) run(cmd *cobra.Command, args []string) error {
 	logger := core.NewConsoleLogger()
 	shell := core.NewExecShell()
 
+	// Create cache manager for Node.js releases
+	cache, err := core.NewCacheManager()
+	if err != nil {
+		return fmt.Errorf("failed to create cache manager: %w", err)
+	}
+
+	// Create Node.js releases client (for Dockerfile codename resolution)
+	releasesClient := core.NewNodeReleasesClient(cache, logger)
+
 	// Create all version detectors
 	// Open/Closed Principle: Adding new detectors doesn't require modifying existing code
 	detectorsList := []core.VersionDetector{
 		detectors.NewNvmrcDetector(),
 		detectors.NewNodeVersionDetector(),
 		detectors.NewPackageJsonDetector(),
-		detectors.NewDockerfileDetector(),
+		detectors.NewDockerfileDetector(releasesClient),
 	}
 
 	// Create all version managers

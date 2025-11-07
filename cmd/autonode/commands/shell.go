@@ -41,12 +41,23 @@ func (c *ShellCommand) run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Create cache manager for Node.js releases (silent mode)
+	cache, err := core.NewCacheManager()
+	if err != nil {
+		// Silent failure - just exit without output
+		return nil
+	}
+
+	// Create null logger for silent operation
+	logger := core.NewNullLogger()
+	releasesClient := core.NewNodeReleasesClient(cache, logger)
+
 	// Create detectors (no logger needed for silent mode)
 	detectorsList := []core.VersionDetector{
 		detectors.NewNvmrcDetector(),
 		detectors.NewNodeVersionDetector(),
 		detectors.NewPackageJsonDetector(),
-		detectors.NewDockerfileDetector(),
+		detectors.NewDockerfileDetector(releasesClient),
 	}
 
 	// Sort detectors by priority
