@@ -10,7 +10,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.4.0"
+var version = "0.4.1"
+
+// GetVersion returns the current version of autonode
+func GetVersion() string {
+	return version
+}
 
 func main() {
 	// Create root command

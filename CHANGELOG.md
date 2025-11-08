@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-11-07
+
+### Fixed
+
+- **Update Command Archive Handling**: Fixed critical bug in `autonode update`
+  - GoReleaser creates `.tar.gz` archives (or `.zip` for Windows), not raw binaries
+  - Updated to download and extract correct archive format
+  - Added extraction support for both tar.gz (Unix) and zip (Windows)
+  - Fixes 'HTTP 404' error when running `autonode update`
+
+### Added
+
+- **Version Check Before Update**: Added intelligent version comparison
+  - Shows "You're already on the latest version" if up-to-date
+  - Displays "Updating from X → Y" with current and target versions
+  - Skips unnecessary downloads when already on latest version
+  - Fetches latest version from GitHub API before downloading
+
+- **Improved Update Messages**: Better user feedback during update process
+  - Shows current version → target version before downloading
+  - Displays archive name being downloaded
+  - Clear success message with new version number
+
+### Changed
+
+- **Version Access**: Added `GetVersion()` getter function in main package
+  - Maintains proper encapsulation (version variable stays private)
+  - Allows update command to access current version without circular dependency
+  - Uses Cobra's root command version instead of direct import
+
 ## [0.4.0] - 2025-11-07
 
 ### Added - Dynamic Node.js Release Cache
