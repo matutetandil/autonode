@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2025-11-10
+
+### Fixed
+
+- **Shell integration npm profile switching**: Fixed critical bug where `autonode shell` (used by cd hooks) was not switching npm profiles, only Node.js versions. Shell integration now correctly switches both Node.js version and npm profile when configured.
+
+### Changed
+
+- **Code refactoring**: Eliminated code duplication between `run.go` and `shell.go` by implementing `ShellMode` flag in `Config`. Both normal mode and shell mode now use the same `AutoNodeService.Run()` method, reducing code by 87 lines and improving maintainability. This change is internal and does not affect the external API or behavior.
+
+### Technical Details
+
+- Added `ShellMode bool` field to `Config` struct
+- Implemented `runShellMode()` method in `AutoNodeService` for shell command output
+- Refactored `shell.go` to use `AutoNodeService` with dependency injection
+- All 116 tests passing ✅
+- Zero breaking changes
+
 ## [0.5.0] - 2025-11-10
 
 ### Added - npm Profile Management

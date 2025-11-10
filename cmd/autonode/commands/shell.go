@@ -1,13 +1,12 @@
 package commands
 
 import (
-	"fmt"
 	"os"
-	"sort"
 
 	"github.com/matutetandil/autonode/internal/core"
 	"github.com/matutetandil/autonode/internal/detectors"
 	"github.com/matutetandil/autonode/internal/managers"
+	"github.com/matutetandil/autonode/internal/switchers"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +30,7 @@ Used by the shell integration hook. Usage: eval "$(autonode shell)"`,
 	}
 }
 
-// run outputs shell commands for eval integration
+// run outputs shell commands for eval integration using AutoNodeService
 // This is used by the shell hook for automatic version switching
 func (c *ShellCommand) run(cmd *cobra.Command, args []string) error {
 	// Get current working directory
@@ -41,18 +40,28 @@ func (c *ShellCommand) run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Create cache manager for Node.js releases (silent mode)
+	// Create configuration with ShellMode enabled
+	config := core.Config{
+		ProjectPath: projectPath,
+		ShellMode:   true, // This tells the service to output commands instead of executing them
+	}
+
+	// Dependency Injection: Create all concrete implementations
+	// Use NullLogger for silent operation (no colorful output)
+	logger := core.NewNullLogger()
+	shell := core.NewExecShell()
+
+	// Create cache manager for Node.js releases
 	cache, err := core.NewCacheManager()
 	if err != nil {
 		// Silent failure - just exit without output
 		return nil
 	}
 
-	// Create null logger for silent operation
-	logger := core.NewNullLogger()
+	// Create Node.js releases client (for Dockerfile codename resolution)
 	releasesClient := core.NewNodeReleasesClient(cache, logger)
 
-	// Create detectors (no logger needed for silent mode)
+	// Create all version detectors
 	detectorsList := []core.VersionDetector{
 		detectors.NewNvmrcDetector(),
 		detectors.NewNodeVersionDetector(),
@@ -60,66 +69,29 @@ func (c *ShellCommand) run(cmd *cobra.Command, args []string) error {
 		detectors.NewDockerfileDetector(releasesClient),
 	}
 
-	// Sort detectors by priority
-	sort.Slice(detectorsList, func(i, j int) bool {
-		return detectorsList[i].GetPriority() < detectorsList[j].GetPriority()
-	})
-
-	// Detect version silently
-	var detectedVersion string
-	for _, detector := range detectorsList {
-		result, err := detector.Detect(projectPath)
-		if err != nil || !result.Found {
-			continue
-		}
-		detectedVersion = result.Version
-		break
-	}
-
-	// If no version detected, exit silently
-	if detectedVersion == "" {
-		return nil
-	}
-
-	// Create shell executor and managers
-	shell := core.NewExecShell()
+	// Create all version managers
 	managersList := []core.VersionManager{
 		managers.NewNvmManager(shell),
 		managers.NewNvsManager(shell),
 		managers.NewVoltaManager(shell),
 	}
 
-	// Find installed manager
-	var manager core.VersionManager
-	for _, m := range managersList {
-		if m.IsInstalled() {
-			manager = m
-			break
-		}
+	// Create all profile detectors
+	profileDetectorsList := []core.ProfileDetector{
+		detectors.NewAutonodeYmlProfileDetector(),
+		detectors.NewPackageJsonProfileDetector(),
 	}
 
-	// If no manager found, exit silently
-	if manager == nil {
-		return nil
+	// Create all profile switchers
+	profileSwitchersList := []core.ProfileSwitcher{
+		switchers.NewNpmrcSwitcher(shell),
+		switchers.NewTsNpmrcSwitcher(shell),
+		switchers.NewRcManagerSwitcher(shell),
 	}
 
-	// Output shell commands based on manager type
-	switch manager.GetName() {
-	case "nvm":
-		// For nvm, output commands to source nvm.sh and use version
-		fmt.Println(`export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"`)
-		fmt.Println(`[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"`)
-		fmt.Printf("nvm use %s 2>/dev/null\n", detectedVersion)
-	case "nvs":
-		// For nvs, output commands to source nvs.sh and use version
-		fmt.Println(`export NVS_HOME="${NVS_HOME:-$HOME/.nvs}"`)
-		fmt.Println(`[ -s "$NVS_HOME/nvs.sh" ] && \. "$NVS_HOME/nvs.sh"`)
-		fmt.Printf("nvs use %s 2>/dev/null\n", detectedVersion)
-	case "volta":
-		// Volta is a standalone binary, doesn't need sourcing
-		// It automatically manages versions per-directory
-		fmt.Printf("volta pin node@%s 2>/dev/null\n", detectedVersion)
-	}
+	// Create the service with all dependencies
+	service := core.NewAutoNodeService(logger, detectorsList, managersList, profileDetectorsList, profileSwitchersList)
 
-	return nil
+	// Run the service in shell mode (outputs commands, doesn't execute them)
+	return service.Run(config)
 }

@@ -6,4 +6,5 @@ type Config struct {
 	ProjectPath string
 	CheckOnly   bool
 	Force       bool
+	ShellMode   bool // When true, outputs shell commands instead of executing them
 }

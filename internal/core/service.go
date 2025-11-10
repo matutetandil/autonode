@@ -50,7 +50,14 @@ func NewAutoNodeService(
 }
 
 // Run executes the main workflow: detect version, find manager, and switch version
+// When ShellMode is enabled, outputs shell commands instead of executing them
 func (s *AutoNodeService) Run(config Config) error {
+	// Shell mode: output commands for eval integration
+	if config.ShellMode {
+		return s.runShellMode(config)
+	}
+
+	// Normal mode: execute commands directly
 	s.logger.Info(fmt.Sprintf("Scanning project at: %s", config.ProjectPath))
 
 	// Step 1: Detect Node.js version
@@ -231,4 +238,66 @@ func (s *AutoNodeService) switchProfileIfConfigured(projectPath string) {
 	}
 
 	s.logger.Success(fmt.Sprintf("Successfully switched to npm profile '%s'", profileResult.ProfileName))
+}
+
+// runShellMode outputs shell commands for eval integration (used by shell hooks)
+// This runs silently - no logs, just command output
+func (s *AutoNodeService) runShellMode(config Config) error {
+	// Detect Node.js version silently
+	versionResult, err := s.detectVersion(config.ProjectPath)
+	if err != nil || !versionResult.Found {
+		// Silent failure - no version detected, exit without output
+		return nil
+	}
+
+	// Find installed version manager
+	manager, err := s.findVersionManager()
+	if err != nil {
+		// Silent failure - no manager found, exit without output
+		return nil
+	}
+
+	// Output shell commands based on manager type
+	switch manager.GetName() {
+	case "nvm":
+		// For nvm, output commands to source nvm.sh and use version
+		fmt.Println(`export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"`)
+		fmt.Println(`[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"`)
+		fmt.Printf("nvm use %s 2>/dev/null\n", versionResult.Version)
+	case "nvs":
+		// For nvs, output commands to source nvs.sh and use version
+		fmt.Println(`export NVS_HOME="${NVS_HOME:-$HOME/.nvs}"`)
+		fmt.Println(`[ -s "$NVS_HOME/nvs.sh" ] && \. "$NVS_HOME/nvs.sh"`)
+		fmt.Printf("nvs use %s 2>/dev/null\n", versionResult.Version)
+	case "volta":
+		// Volta is a standalone binary, doesn't need sourcing
+		// It automatically manages versions per-directory
+		fmt.Printf("volta pin node@%s 2>/dev/null\n", versionResult.Version)
+	}
+
+	// Detect npm profile configuration silently
+	profileResult, err := s.detectProfile(config.ProjectPath)
+	if err != nil || !profileResult.Found {
+		// No profile configured - exit without error
+		return nil
+	}
+
+	// Find installed profile switcher
+	switcher := s.findProfileSwitcher()
+	if switcher == nil {
+		// No profile switcher installed - exit without error
+		return nil
+	}
+
+	// Output shell command to switch profile based on switcher type
+	switch switcher.GetName() {
+	case "npmrc":
+		fmt.Printf("npmrc %s 2>/dev/null\n", profileResult.ProfileName)
+	case "ts-npmrc":
+		fmt.Printf("ts-npmrc link -p %s 2>/dev/null\n", profileResult.ProfileName)
+	case "rc-manager":
+		fmt.Printf("rc-manager load %s 2>/dev/null\n", profileResult.ProfileName)
+	}
+
+	return nil
 }
