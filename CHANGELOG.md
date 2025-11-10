@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-11-10
+
+### Added - npm Profile Management
+
+AutoNode can now automatically switch npm profiles (registry configurations) when changing projects. This is perfect for managing different npm registries for work, personal, or client-specific projects.
+
+#### Profile Switching Features
+
+- **Multi-Tool Support**: Works with popular npm profile management tools:
+  - **[npmrc](https://github.com/deoxxa/npmrc)** - Most popular npm profile switcher
+  - **[ts-npmrc](https://github.com/darsi-an/ts-npmrc)** - Modern TypeScript implementation
+  - **[rc-manager](https://github.com/Lalaluka/rc-manager)** - Supports npm and yarn
+
+- **Flexible Configuration**: Configure profiles in two ways (with priority):
+  1. `.autonode.yml` file with `npmProfile: work` (highest priority)
+  2. `package.json` with `"autonode": { "npmProfile": "work" }`
+
+- **Silent Operation**: Completely opt-in and non-intrusive
+  - Only switches profiles if configured
+  - No warnings if profile tool not installed
+  - Works seamlessly alongside Node.js version switching
+
+- **Profile Detection Priority**:
+  1. `.autonode.yml` (checked first)
+  2. `package.json` autonode field
+
+- **Tool Priority**: If multiple tools installed, uses first available:
+  1. npmrc (most popular)
+  2. ts-npmrc
+  3. rc-manager
+
+#### Architecture
+
+- **New Core Interfaces** (SOLID principles):
+  - `ProfileDetector` interface for detecting profile configuration
+  - `ProfileSwitcher` interface for switching npm profiles
+  - `ProfileDetectionResult` type for detection results
+
+- **New Detectors** (`internal/detectors/`):
+  - `AutonodeYmlProfileDetector` - Reads `.autonode.yml` (priority 1)
+  - `PackageJsonProfileDetector` - Reads `package.json` autonode field (priority 2)
+
+- **New Switchers** (`internal/switchers/`):
+  - `NpmrcSwitcher` - Manages profiles using npmrc
+  - `TsNpmrcSwitcher` - Manages profiles using ts-npmrc
+  - `RcManagerSwitcher` - Manages profiles using rc-manager
+
+- **Service Integration**:
+  - Updated `AutoNodeService` to handle profile switching
+  - Integrated profile detection and switching into main workflow
+  - Silent mode: no errors if profile tools missing
+
+#### Testing
+
+- **Comprehensive Test Coverage**: Added 38 new test cases
+  - `AutonodeYmlProfileDetector`: 11 tests (YAML parsing, priorities, edge cases)
+  - `PackageJsonProfileDetector`: 11 tests (JSON parsing, priorities, edge cases)
+  - `NpmrcSwitcher`: 8 tests (installation, profile detection, switching)
+  - `TsNpmrcSwitcher`: 8 tests (installation, profile detection, switching)
+  - `RcManagerSwitcher`: 8 tests (installation, profile detection, switching)
+  - Created `MockShell` for testing switchers without actual shell commands
+  - All 119 test cases passing ✅
+
+### Dependencies
+
+- **Added**: `gopkg.in/yaml.v3` for YAML parsing in `.autonode.yml` files
+
+### Documentation
+
+- **README.md**: Added comprehensive "npm Profile Management" section
+  - Installation instructions for profile tools
+  - Configuration examples (both `.autonode.yml` and `package.json`)
+  - How it works explanation
+  - Example output
+  - Priority documentation
+
+- **Updated Features**: Added npm profile management to feature list
+  - Clear explanation of silent mode behavior
+  - Links to supported profile management tools
+
+### Example Usage
+
+After configuration, AutoNode automatically switches both Node.js version and npm profile:
+
+```bash
+$ cd my-work-project
+✓ Detected Node.js version 18.17.0 from .nvmrc
+Using version manager: nvm
+Switching to Node.js 18.17.0...
+✓ Successfully switched to Node.js 18.17.0
+Switching to npm profile 'work' using npmrc...
+✓ Successfully switched to npm profile 'work'
+```
+
+### Why This Matters
+
+Many developers work on multiple projects with different npm registries (company registry, personal registry, client-specific registry). Previously, this required manual profile switching with tools like npmrc. Now, AutoNode handles it automatically based on project configuration, providing a complete environment setup in one step.
+
 ## [0.4.1] - 2025-11-07
 
 ### Fixed

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.4.1"
+var version = "0.5.0"
 
 // GetVersion returns the current version of autonode
 func GetVersion() string {

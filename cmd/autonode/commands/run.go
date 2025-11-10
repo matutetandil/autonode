@@ -7,6 +7,7 @@ import (
 	"github.com/matutetandil/autonode/internal/core"
 	"github.com/matutetandil/autonode/internal/detectors"
 	"github.com/matutetandil/autonode/internal/managers"
+	"github.com/matutetandil/autonode/internal/switchers"
 	"github.com/spf13/cobra"
 )
 
@@ -84,9 +85,24 @@ func (c *RunCommand) run(cmd *cobra.Command, args []string) error {
 		managers.NewVoltaManager(shell),
 	}
 
+	// Create all profile detectors
+	// Open/Closed Principle: Adding new detectors doesn't require modifying existing code
+	profileDetectorsList := []core.ProfileDetector{
+		detectors.NewAutonodeYmlProfileDetector(),
+		detectors.NewPackageJsonProfileDetector(),
+	}
+
+	// Create all profile switchers
+	// Open/Closed Principle: Adding new switchers doesn't require modifying existing code
+	profileSwitchersList := []core.ProfileSwitcher{
+		switchers.NewNpmrcSwitcher(shell),
+		switchers.NewTsNpmrcSwitcher(shell),
+		switchers.NewRcManagerSwitcher(shell),
+	}
+
 	// Create the main service with all dependencies injected
 	// Dependency Inversion Principle: Service depends on abstractions (interfaces)
-	service := core.NewAutoNodeService(logger, detectorsList, managersList)
+	service := core.NewAutoNodeService(logger, detectorsList, managersList, profileDetectorsList, profileSwitchersList)
 
 	// Run the service
 	return service.Run(config)

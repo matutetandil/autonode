@@ -5,14 +5,16 @@ import (
 	"sort"
 )
 
-// AutoNodeService orchestrates version detection and switching
+// AutoNodeService orchestrates version detection and switching, as well as npm profile switching
 // Single Responsibility Principle: Only responsible for orchestrating the workflow
 // Dependency Inversion Principle: Depends on abstractions (interfaces), not concrete implementations
 // Open/Closed Principle: New detectors and managers can be added without modifying this service
 type AutoNodeService struct {
-	logger    Logger
-	detectors []VersionDetector
-	managers  []VersionManager
+	logger           Logger
+	detectors        []VersionDetector
+	managers         []VersionManager
+	profileDetectors []ProfileDetector
+	profileSwitchers []ProfileSwitcher
 }
 
 // NewAutoNodeService creates a new AutoNodeService with injected dependencies
@@ -21,6 +23,8 @@ func NewAutoNodeService(
 	logger Logger,
 	detectors []VersionDetector,
 	managers []VersionManager,
+	profileDetectors []ProfileDetector,
+	profileSwitchers []ProfileSwitcher,
 ) *AutoNodeService {
 	// Sort detectors by priority (lower number = higher priority)
 	sortedDetectors := make([]VersionDetector, len(detectors))
@@ -29,10 +33,19 @@ func NewAutoNodeService(
 		return sortedDetectors[i].GetPriority() < sortedDetectors[j].GetPriority()
 	})
 
+	// Sort profile detectors by priority (lower number = higher priority)
+	sortedProfileDetectors := make([]ProfileDetector, len(profileDetectors))
+	copy(sortedProfileDetectors, profileDetectors)
+	sort.Slice(sortedProfileDetectors, func(i, j int) bool {
+		return sortedProfileDetectors[i].GetPriority() < sortedProfileDetectors[j].GetPriority()
+	})
+
 	return &AutoNodeService{
-		logger:    logger,
-		detectors: sortedDetectors,
-		managers:  managers,
+		logger:           logger,
+		detectors:        sortedDetectors,
+		managers:         managers,
+		profileDetectors: sortedProfileDetectors,
+		profileSwitchers: profileSwitchers,
 	}
 }
 
@@ -53,7 +66,13 @@ func (s *AutoNodeService) Run(config Config) error {
 
 	s.logger.Success(fmt.Sprintf("Detected Node.js version %s from %s", result.Version, result.Source))
 
-	// If check-only mode, stop here
+	// Detect npm profile configuration (for dry-run display in check mode)
+	profileResult, _ := s.detectProfile(config.ProjectPath)
+	if profileResult.Found {
+		s.logger.Success(fmt.Sprintf("Detected npm profile '%s' from %s", profileResult.ProfileName, profileResult.Source))
+	}
+
+	// If check-only mode, stop here (dry-run completed)
 	if config.CheckOnly {
 		return nil
 	}
@@ -100,6 +119,10 @@ func (s *AutoNodeService) Run(config Config) error {
 	}
 
 	s.logger.Success(fmt.Sprintf("Successfully switched to Node.js %s", result.Version))
+
+	// Step 6: Switch npm profile if configured
+	s.switchProfileIfConfigured(config.ProjectPath)
+
 	return nil
 }
 
@@ -131,4 +154,81 @@ func (s *AutoNodeService) findVersionManager() (VersionManager, error) {
 	}
 
 	return nil, fmt.Errorf("no version manager found (nvm, nvs, or volta)")
+}
+
+// detectProfile tries all profile detectors in priority order
+// Chain of Responsibility Pattern: Try detectors until one succeeds
+func (s *AutoNodeService) detectProfile(projectPath string) (ProfileDetectionResult, error) {
+	for _, detector := range s.profileDetectors {
+		result, err := detector.Detect(projectPath)
+		if err != nil {
+			// Silent failure - just try next detector
+			continue
+		}
+
+		if result.Found {
+			return result, nil
+		}
+	}
+
+	return ProfileDetectionResult{Found: false}, nil
+}
+
+// findProfileSwitcher returns the first installed profile switcher
+// Strategy Pattern: Select the first available strategy
+func (s *AutoNodeService) findProfileSwitcher() ProfileSwitcher {
+	for _, switcher := range s.profileSwitchers {
+		if switcher.IsInstalled() {
+			return switcher
+		}
+	}
+
+	return nil
+}
+
+// switchProfileIfConfigured attempts to switch npm profile if one is configured
+// This is called after Node.js version switching and operates silently:
+// - If no profile is configured: does nothing (silent)
+// - If no profile switcher is installed: does nothing (silent)
+// - If profile doesn't exist: logs warning
+// - If switch succeeds: logs success
+func (s *AutoNodeService) switchProfileIfConfigured(projectPath string) {
+	// Try to detect profile configuration
+	profileResult, err := s.detectProfile(projectPath)
+	if err != nil || !profileResult.Found {
+		// No profile configured - silent, this is normal
+		return
+	}
+
+	// Try to find an installed profile switcher
+	switcher := s.findProfileSwitcher()
+	if switcher == nil {
+		// No profile switcher installed - silent, user may not use profile tools
+		return
+	}
+
+	// Check if the profile exists
+	exists, err := switcher.ProfileExists(profileResult.ProfileName)
+	if err != nil {
+		s.logger.Warning(fmt.Sprintf("Could not verify if npm profile '%s' exists: %v", profileResult.ProfileName, err))
+		return
+	}
+
+	if !exists {
+		s.logger.Warning(fmt.Sprintf("npm profile '%s' (from %s) not found in %s",
+			profileResult.ProfileName, profileResult.Source, switcher.GetName()))
+		return
+	}
+
+	// Switch to the profile
+	s.logger.Info(fmt.Sprintf("Switching to npm profile '%s' using %s...",
+		profileResult.ProfileName, switcher.GetName()))
+
+	err = switcher.SwitchProfile(profileResult.ProfileName)
+	if err != nil {
+		s.logger.Warning(fmt.Sprintf("Failed to switch npm profile: %v", err))
+		return
+	}
+
+	s.logger.Success(fmt.Sprintf("Successfully switched to npm profile '%s'", profileResult.ProfileName))
 }

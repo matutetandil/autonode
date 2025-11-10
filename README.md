@@ -27,6 +27,12 @@ No more manual version switching or compatibility issues - just run `autonode` a
   - **nvs** (Node Version Switcher)
   - **Volta**
 
+- 🔐 **npm Profile Management**: Automatically switches npm profiles (registry configurations) per project:
+  - Supports **npmrc**, **ts-npmrc**, and **rc-manager**
+  - Configure profiles in `.autonode.yml` or `package.json`
+  - Perfect for managing different npm registries (work, personal, client-specific)
+  - Silent mode: only switches if configured and tool is installed
+
 - 🎨 **User-Friendly**: Clear, colorful output with helpful messages
 
 - 🏗️ **SOLID Architecture**: Built with clean architecture principles for easy extensibility
@@ -319,6 +325,102 @@ AutoNode dynamically resolves Node.js LTS codenames by fetching release data fro
 | fermium  | 14           | 2020-10   |
 
 The mapping is cached locally in `~/.autonode/node-releases.json` and refreshed every 24 hours.
+
+## npm Profile Management
+
+AutoNode can automatically switch npm profiles (different `.npmrc` configurations) when changing projects. This is perfect for managing different npm registries for work, personal projects, or different clients.
+
+### Supported Profile Tools
+
+AutoNode supports three popular npm profile management tools:
+
+1. **[npmrc](https://github.com/deoxxa/npmrc)** - The most popular npm profile switcher
+2. **[ts-npmrc](https://github.com/darsi-an/ts-npmrc)** - Modern TypeScript implementation with additional features
+3. **[rc-manager](https://github.com/Lalaluka/rc-manager)** - Supports both npm and yarn configurations
+
+### Configuration
+
+You can configure which npm profile to use for a project in two ways:
+
+#### Option 1: `.autonode.yml` (Highest Priority)
+
+Create a `.autonode.yml` file in your project root:
+
+```yaml
+npmProfile: work
+```
+
+#### Option 2: `package.json`
+
+Add an `autonode` field to your `package.json`:
+
+```json
+{
+  "name": "my-project",
+  "autonode": {
+    "npmProfile": "work"
+  }
+}
+```
+
+**Note:** If both files exist, `.autonode.yml` takes priority.
+
+### Installation
+
+Install one of the supported profile management tools:
+
+**npmrc:**
+```bash
+npm install -g npmrc
+npmrc -c work     # Create a 'work' profile
+npmrc -c personal # Create a 'personal' profile
+```
+
+**ts-npmrc:**
+```bash
+npm install -g ts-npmrc
+ts-npmrc create work     # Create a 'work' profile
+ts-npmrc create personal # Create a 'personal' profile
+```
+
+**rc-manager:**
+```bash
+npm install -g rc-manager
+rc-manager save work     # Save current config as 'work' profile
+rc-manager save personal # Save current config as 'personal' profile
+```
+
+### How It Works
+
+When AutoNode switches Node.js versions, it will:
+
+1. Check if a profile is configured (in `.autonode.yml` or `package.json`)
+2. Look for an installed profile management tool (npmrc, ts-npmrc, or rc-manager)
+3. Verify the profile exists
+4. Switch to that profile automatically
+
+**Silent Mode:** If no profile is configured or no profile tool is installed, AutoNode works normally without any warnings. This feature is completely opt-in.
+
+### Example Output
+
+```bash
+$ cd my-work-project
+Scanning project at: /Users/dev/my-work-project
+✓ Detected Node.js version 18.17.0 from .nvmrc
+Using version manager: nvm
+Node.js 18.17.0 is already installed
+Switching to Node.js 18.17.0...
+✓ Successfully switched to Node.js 18.17.0
+Switching to npm profile 'work' using npmrc...
+✓ Successfully switched to npm profile 'work'
+```
+
+### Profile Priority
+
+If multiple profile tools are installed, AutoNode checks them in this order:
+1. **npmrc** (most popular, checked first)
+2. **ts-npmrc**
+3. **rc-manager**
 
 ## Supported Version Managers
 
