@@ -5,7 +5,7 @@
 BINARY_NAME=autonode
 
 # Version (can be overridden: make VERSION=1.0.0 build)
-VERSION?=0.5.1
+VERSION?=0.6.0
 
 # Build directory
 BUILD_DIR=bin

@@ -119,7 +119,7 @@ func (d *DockerfileDetector) resolveTag(tag string) string {
 	return ""
 }
 
-// GetPriority returns the priority of this detector (4 = lowest priority)
+// GetPriority returns the priority of this detector (4 = fifth/lowest priority)
 func (d *DockerfileDetector) GetPriority() int {
 	return 4
 }

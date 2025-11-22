@@ -46,7 +46,7 @@ func (d *NodeVersionDetector) Detect(projectPath string) (core.DetectionResult, 
 	}, nil
 }
 
-// GetPriority returns the priority of this detector (2 = second priority)
+// GetPriority returns the priority of this detector (2 = third priority)
 func (d *NodeVersionDetector) GetPriority() int {
 	return 2
 }

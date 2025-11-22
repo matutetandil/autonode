@@ -5,6 +5,112 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-11-22
+
+### Added - Local Configuration Command
+
+This release adds the `autonode config` command for configuring Node.js version and npm profile per directory without requiring standard version files.
+
+#### Config Command Features
+
+- **`autonode config --node <version>`**: Set the Node.js version for the current directory
+  - Creates or updates `.autonode.yml` file
+  - Supports major versions (`20`), minor (`18.17`), or full versions (`18.17.0`)
+
+- **`autonode config --profile <name>`**: Set the npm profile for the current directory
+  - Works alongside existing npm profile management feature
+  - Can be combined with `--node` flag
+
+- **`autonode config --show`**: Display current configuration
+  - Shows nodeVersion and npmProfile if configured
+  - Helpful message when no configuration exists
+
+- **`autonode config --remove`**: Remove `.autonode.yml` configuration file
+  - Clean removal with confirmation message
+
+- **Partial Removal**: Remove individual fields by setting them to empty string
+  - `autonode config --node ""` removes only nodeVersion
+  - `autonode config --profile ""` removes only npmProfile
+  - File is deleted automatically if both fields become empty
+
+#### New Version Detector
+
+- **`AutonodeYmlVersionDetector`**: Reads `nodeVersion` from `.autonode.yml`
+  - Priority 0 (highest) - checked before `.nvmrc`
+  - Allows explicit override of any other version source
+  - Works in shell integration (cd hooks)
+
+#### Detection Priority Update
+
+Updated version detection priority order:
+1. **`.autonode.yml`** (priority 0) - NEW, highest priority
+2. `.nvmrc` (priority 1)
+3. `.node-version` (priority 2)
+4. `package.json` (priority 3)
+5. `Dockerfile` (priority 4)
+
+#### Use Case
+
+Perfect for directories that need a specific Node.js version but:
+- Don't have a `.nvmrc` file (non-Node projects)
+- Shouldn't have version files committed (shared repos)
+- Need to override existing version files locally
+- Use Node.js for build tools in non-Node projects
+
+#### Testing
+
+- **New Tests Added**: 30 new test cases
+  - `AutonodeYmlVersionDetector`: 14 tests (detection, priority, source name)
+  - `ConfigCommand`: 16 tests (load, save, remove, YAML omit empty)
+  - Total: ~198 tests passing ✅
+
+#### Architecture
+
+- **New Files**:
+  - `cmd/autonode/commands/config.go` - Config command implementation
+  - `cmd/autonode/commands/config_test.go` - Config command tests
+  - `internal/detectors/autonode_yml_version.go` - Version detector from .autonode.yml
+  - `internal/detectors/autonode_yml_version_test.go` - Detector tests
+
+- **Modified Files**:
+  - `cmd/autonode/commands/run.go` - Added new detector
+  - `cmd/autonode/commands/shell.go` - Added new detector
+  - Updated detector priority comments in existing detectors
+
+### Documentation
+
+- **README.md**:
+  - Added `config` command to features and usage sections
+  - Updated version detection priority (`.autonode.yml` first)
+  - Added architecture diagram update
+
+### Example Usage
+
+```bash
+# Configure a directory that uses Node for build tools
+$ cd my-golang-project
+$ autonode config --node 20
+✓ Set nodeVersion to '20'
+Configuration saved to /path/to/my-golang-project/.autonode.yml
+
+# Configure both version and profile
+$ autonode config --node 18 --profile work
+✓ Set nodeVersion to '18'
+✓ Set npmProfile to 'work'
+Configuration saved to /path/to/.autonode.yml
+
+# Check configuration
+$ autonode config --show
+Current configuration (.autonode.yml):
+  nodeVersion: 18
+  npmProfile: work
+
+# Now autonode uses .autonode.yml even if .nvmrc exists
+$ autonode --check
+✓ Detected Node.js version 18 from .autonode.yml
+✓ Detected npm profile 'work' from .autonode.yml
+```
+
 ## [0.5.1] - 2025-11-10
 
 ### Fixed

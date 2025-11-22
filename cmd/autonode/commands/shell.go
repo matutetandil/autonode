@@ -62,7 +62,9 @@ func (c *ShellCommand) run(cmd *cobra.Command, args []string) error {
 	releasesClient := core.NewNodeReleasesClient(cache, logger)
 
 	// Create all version detectors
+	// Priority order: .autonode.yml (0) > .nvmrc (1) > .node-version (2) > package.json (3) > Dockerfile (4)
 	detectorsList := []core.VersionDetector{
+		detectors.NewAutonodeYmlVersionDetector(),
 		detectors.NewNvmrcDetector(),
 		detectors.NewNodeVersionDetector(),
 		detectors.NewPackageJsonDetector(),

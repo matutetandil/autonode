@@ -46,7 +46,7 @@ func (d *NvmrcDetector) Detect(projectPath string) (core.DetectionResult, error)
 	}, nil
 }
 
-// GetPriority returns the priority of this detector (1 = highest priority)
+// GetPriority returns the priority of this detector (1 = second priority, after .autonode.yml)
 func (d *NvmrcDetector) GetPriority() int {
 	return 1
 }

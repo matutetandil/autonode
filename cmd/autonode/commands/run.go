@@ -70,7 +70,9 @@ func (c *RunCommand) run(cmd *cobra.Command, args []string) error {
 
 	// Create all version detectors
 	// Open/Closed Principle: Adding new detectors doesn't require modifying existing code
+	// Priority order: .autonode.yml (0) > .nvmrc (1) > .node-version (2) > package.json (3) > Dockerfile (4)
 	detectorsList := []core.VersionDetector{
+		detectors.NewAutonodeYmlVersionDetector(),
 		detectors.NewNvmrcDetector(),
 		detectors.NewNodeVersionDetector(),
 		detectors.NewPackageJsonDetector(),

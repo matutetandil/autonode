@@ -17,10 +17,11 @@ No more manual version switching or compatibility issues - just run `autonode` a
 ## Features
 
 - 🔍 **Smart Detection**: Automatically detects Node.js version from multiple sources:
-  1. `.nvmrc` file (highest priority)
-  2. `.node-version` file
-  3. `engines.node` field in `package.json`
-  4. `FROM node:X` in `Dockerfile` (supports numeric versions, LTS codenames like `iron`/`jod`, and tags like `lts`/`latest`)
+  1. `.autonode.yml` file (highest priority - set via `autonode config`)
+  2. `.nvmrc` file
+  3. `.node-version` file
+  4. `engines.node` field in `package.json`
+  5. `FROM node:X` in `Dockerfile` (supports numeric versions, LTS codenames like `iron`/`jod`, and tags like `lts`/`latest`)
 
 - 🔄 **Multi-Manager Support**: Works with popular Node.js version managers:
   - **nvm** (Node Version Manager)
@@ -273,6 +274,36 @@ autonode update
 
 This downloads and installs the latest release from GitHub automatically.
 
+#### Configure Local Version (`config`)
+
+Configure a specific Node.js version and/or npm profile for the current directory:
+
+```bash
+# Set Node.js version
+autonode config --node 20
+autonode config --node 18.17.0
+
+# Set npm profile
+autonode config --profile work
+
+# Set both at once
+autonode config --node 20 --profile work
+
+# Show current configuration
+autonode config --show
+
+# Remove configuration
+autonode config --remove
+
+# Remove only one field
+autonode config --node ""      # Remove nodeVersion
+autonode config --profile ""   # Remove npmProfile
+```
+
+This creates or updates a `.autonode.yml` file in the current directory. The `.autonode.yml` configuration has the **highest priority**, even over `.nvmrc`.
+
+**Use case:** Perfect for directories that need a specific Node.js version but don't have (or shouldn't have) a `.nvmrc` file - for example, non-Node projects that use Node.js for build tools.
+
 ### Examples
 
 ```bash
@@ -300,10 +331,11 @@ Scanning project at: /Users/dev/myproject
 
 AutoNode looks for version information in this order:
 
-1. **`.nvmrc`** - Most common, highest priority
-2. **`.node-version`** - Alternative version file
-3. **`package.json`** - Reads `engines.node` field
-4. **`Dockerfile`** - Parses `FROM node:X` instruction
+1. **`.autonode.yml`** - Highest priority (set via `autonode config --node <version>`)
+2. **`.nvmrc`** - Most common version file
+3. **`.node-version`** - Alternative version file
+4. **`package.json`** - Reads `engines.node` field
+5. **`Dockerfile`** - Parses `FROM node:X` instruction
    - Supports numeric versions: `FROM node:18.17.0`, `FROM node:20`
    - Supports LTS codenames: `FROM node:iron-alpine`, `FROM node:jod`
    - Supports special tags: `FROM node:lts`, `FROM node:latest`
@@ -471,6 +503,7 @@ autonode/
 │   │   ├── version_manager.go    # VersionManager interface
 │   │   └── service.go            # AutoNodeService orchestrator
 │   ├── detectors/         # Version detection implementations
+│   │   ├── autonode_yml_version.go # .autonode.yml version detector (highest priority)
 │   │   ├── nvmrc.go              # .nvmrc detector
 │   │   ├── node_version.go       # .node-version detector
 │   │   ├── package_json.go       # package.json detector

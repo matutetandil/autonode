@@ -63,7 +63,7 @@ func (d *PackageJsonDetector) Detect(projectPath string) (core.DetectionResult, 
 	}, nil
 }
 
-// GetPriority returns the priority of this detector (3 = third priority)
+// GetPriority returns the priority of this detector (3 = fourth priority)
 func (d *PackageJsonDetector) GetPriority() int {
 	return 3
 }
