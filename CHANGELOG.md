@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-11-23
+
+### Added - Automatic Update Checks
+
+This release adds automatic, non-blocking update checks that notify users when a new version is available.
+
+#### Update Check Features
+
+- **Async Background Check**: Update check runs in a goroutine, zero impact on command execution
+  - Check happens while your command runs
+  - Never blocks or slows down normal operation
+  - Graceful timeout handling (3 seconds max for GitHub API)
+
+- **Smart Caching**: Results cached in `~/.autonode/update-check.json`
+  - Default check interval: 7 days
+  - Configurable via global config
+  - Offline-friendly: uses cached data when network unavailable
+
+- **Update Notification Banner**: Beautiful box-drawn notification when update available
+  ```
+  ╭───────────────────────────────────────────╮
+  │ A new version of autonode is available!   │
+  │ Current: 0.6.0 → Latest: v0.7.0           │
+  │ Run 'autonode update' to upgrade          │
+  ╰───────────────────────────────────────────╯
+  ```
+
+- **Disable Options**: Multiple ways to disable update checks
+  - `--no-update-check` flag (per-command, great for CI/CD)
+  - Global config file: `~/.autonode/config.json`
+    - `{"disableUpdateCheck": true}` - Disable completely
+    - `{"updateCheckIntervalDays": 14}` - Custom interval
+
+#### Architecture
+
+- **New Files**:
+  - `internal/core/update_checker.go` - Async update checker with caching
+  - `internal/core/update_checker_test.go` - 6 test cases
+  - `internal/core/update_notifier.go` - Banner display component
+  - `internal/core/update_notifier_test.go` - 4 test cases
+  - `internal/core/global_config.go` - Global configuration management
+  - `internal/core/global_config_test.go` - 5 test cases
+
+- **Modified Files**:
+  - `cmd/autonode/main.go` - Integrated update checker into CLI flow
+
+#### Testing
+
+- **New Tests Added**: 23 new test cases
+  - `UpdateChecker`: 6 tests (version comparison, caching, async behavior)
+  - `UpdateNotifier`: 4 tests (banner display, nil handling)
+  - `GlobalConfig`: 5 tests (load, save, defaults, invalid JSON)
+  - Existing tests: 8 additional tests
+  - Total: ~191 tests passing ✅
+
+#### Configuration
+
+Global config stored in `~/.autonode/config.json`:
+
+```json
+{
+  "disableUpdateCheck": false,
+  "updateCheckIntervalDays": 7
+}
+```
+
+#### Why This Matters
+
+Users often miss important updates, security fixes, or new features because they forget to check for updates manually. This feature provides a gentle, non-intrusive reminder while respecting user preferences and CI/CD environments.
+
+---
+
 ## [0.6.0] - 2025-11-22
 
 ### Added - Local Configuration Command

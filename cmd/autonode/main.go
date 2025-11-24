@@ -3,14 +3,19 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	// Import commands package to trigger init() functions that register commands
 	_ "github.com/matutetandil/autonode/cmd/autonode/commands"
 	"github.com/matutetandil/autonode/cmd/autonode/commands"
+	"github.com/matutetandil/autonode/internal/core"
 	"github.com/spf13/cobra"
 )
 
-var version = "0.6.0"
+var version = "0.7.0"
+
+// noUpdateCheck disables the automatic update check (set via --no-update-check flag)
+var noUpdateCheck bool
 
 // GetVersion returns the current version of autonode
 func GetVersion() string {
@@ -42,6 +47,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Add global flag to disable update check (useful for CI/CD)
+	rootCmd.PersistentFlags().BoolVar(&noUpdateCheck, "no-update-check", false, "Disable automatic update check")
+
 	// Add all other commands as subcommands
 	for _, cmd := range allCommands {
 		cobraCmd := cmd.GetCobraCommand()
@@ -51,9 +59,36 @@ func main() {
 		}
 	}
 
+	// Start async update check before executing command
+	var updateChecker *core.UpdateChecker
+	cache, cacheErr := core.NewCacheManager()
+	if !noUpdateCheck && cacheErr == nil {
+		// Load global config to check if update check is disabled
+		globalConfig, _ := core.LoadGlobalConfig(cache)
+		if !globalConfig.DisableUpdateCheck {
+			updateChecker = core.NewUpdateChecker(cache, version)
+			// Apply custom interval if configured
+			if globalConfig.UpdateCheckIntervalDays > 0 {
+				updateChecker.SetCheckInterval(
+					time.Duration(globalConfig.UpdateCheckIntervalDays) * 24 * time.Hour,
+				)
+			}
+			updateChecker.StartAsyncCheck()
+		}
+	}
+
 	// Execute
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+
+	// Show update notification if available (after command completes)
+	if updateChecker != nil {
+		result := updateChecker.GetResult()
+		if result != nil && result.UpdateAvailable {
+			notifier := core.NewUpdateNotifier(core.NewConsoleLogger())
+			notifier.ShowUpdateBanner(result)
+		}
 	}
 }
